@@ -12,19 +12,7 @@ import (
 	saic "github.com/sandeepdhakal/mg-dashboard/saicmqtt"
 )
 
-// func handleError(e error) {
-// 	if e != nil {
-// 		fmt.Println("Error:", e)
-// 		os.Exit(1)
-// 	}
-// }
-
-// func parseFloat(s string) float64 {
-// 	res, e := strconv.ParseFloat(s, 64)
-// 	handleError(e)
-// 	return res
-// }
-
+// Vehicle info to be passed to Bubbletea model
 type vehicleInfo struct {
 	soc     float64
 	rng     float64
@@ -34,7 +22,7 @@ type vehicleInfo struct {
 
 var v vehicleInfo = vehicleInfo{}
 
-// model to be used with bubbletea
+// Model to be used with Bubbletea
 type model struct {
 	sub      chan vehicleInfo
 	progress progress.Model
@@ -45,15 +33,18 @@ var m model = model{}
 
 // handler for when connection is established with the mqtt broker
 var connectHandler mqtt.OnConnectHandler = func(client mqtt.Client) {
-	fmt.Println("Connected")
+	// fmt.Println("Connected")
+	// TODO: update UI accordingly
 }
 
 // when disconnected from the mqtt broker
 var disconnectHandler mqtt.ConnectionLostHandler = func(client mqtt.Client, err error) {
-	fmt.Printf("Connection lost: %v\n", err)
+	// fmt.Printf("Connection lost: %v\n", err)
+	// TODO: update UI accordingly
 }
 
 // when a message is received for a subscribed topic
+// Here we will pass the updated vehicle object to the model's channel
 var messagePubHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
 	if saicMsg, err := saic.ParseMessage(msg); err == nil {
 		switch saicMsg.Topic {
@@ -74,20 +65,50 @@ var messagePubHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Me
 		}
 	} else {
 		fmt.Print("Error parsing message!!")
+		// TODO: update UI accordingly
+	}
+}
+
+// Set of methods and struct to read MQTT configuration from environment variables
+func getEnvironmentVariable(v string) string {
+	value, ok := os.LookupEnv(v)
+	if !ok {
+		fmt.Printf("Environment variable %s not set.\n", v)
+	}
+	return value
+}
+
+type config struct {
+	saicUser   string
+	brokerUri  string
+	brokerPort int
+	brokerUser string
+	brokerPass string
+}
+
+func getConfig() config {
+
+	// since port is an integer, we need to process it differently
+	port, e := strconv.Atoi(getEnvironmentVariable("SAIC_BROKER_PORT"))
+	if e != nil {
+		fmt.Printf("Environment variable SAIC_BROKER_PORT must be an integer.\n")
+		os.Exit(1)
+	}
+
+	return config{
+		getEnvironmentVariable("SAIC_USER"),
+		getEnvironmentVariable("SAIC_BROKER_URI"),
+		port,
+		getEnvironmentVariable("SAIC_MQTT_USER"),
+		getEnvironmentVariable("SAIC_MQTT_PASS"),
 	}
 }
 
 // new saic mqtt client
 func newClient() saic.SaicMqttClient {
-	saicUser := "sandeep.dhakal@gmail.com"
-	brokerInfo := saic.NewBrokerInfo(
-		"tcp://localhost",
-		1883,
-		saicUser)
-	clientInfo := saic.NewClientInfo(
-		"mqtt_user",
-		"secret",
-		"")
+	config := getConfig()
+	brokerInfo := saic.NewBrokerInfo(config.brokerUri, config.brokerPort, config.saicUser)
+	clientInfo := saic.NewClientInfo(config.brokerUser, config.brokerPass, "")
 
 	client := saic.NewSaicMqttClient(*brokerInfo,
 		*clientInfo,
@@ -107,19 +128,22 @@ func newClient() saic.SaicMqttClient {
 // message passed to bubbletea
 type updateMsg vehicleInfo
 
-// wait for activity on the model's channel
+// Bubbletea: wait for activity on the model's channel
 func waitForActivity(sub chan vehicleInfo) tea.Cmd {
 	return func() tea.Msg {
 		return updateMsg(<-sub)
 	}
 }
 
+// Bubbletea: initialisation of the UI
 func (m model) Init() tea.Cmd {
 	return tea.Batch(
 		waitForActivity(m.sub), // wait for activity
 	)
 }
 
+// Bubbletea: update the UI when we receive new vehicle updates or other messages
+// such as keypress to interact with the UI
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -134,6 +158,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// Bubbletea: the UI
 func (m model) View() string {
 	s := "Battery status\n"
 	s += "---------------\n"
