@@ -92,8 +92,9 @@ func NewSaicMqttClient(brokerInfo BrokerInfo,
 
 func (c *SaicMqttClient) Subscribe(topic Topic) {
 	topicPath := fmt.Sprintf("%s/%s", prefix, topicPaths[topic])
-	token := c.client.Subscribe(topicPath, 1, nil)
-	token.Wait()
+	// token := c.client.Subscribe(topicPath, 1, nil)
+	c.client.Subscribe(topicPath, 1, nil)
+	// token.Wait()
 	// fmt.Printf("Subscribed to %s\n", topicPath)
 }
 

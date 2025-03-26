@@ -15,10 +15,12 @@ import (
 
 // Vehicle info to be passed to Bubbletea model
 type vehicleInfo struct {
-	soc     float64
-	rng     float64
-	intTemp int
-	extTemp int
+	soc         float64
+	rng         float64
+	intTemp     int
+	extTemp     int
+	bootLocked  bool
+	doorsLocked bool
 }
 
 var v vehicleInfo = vehicleInfo{}
@@ -63,6 +65,14 @@ var messagePubHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Me
 		case saic.TopicExtTemp:
 			v.extTemp, _ = strconv.Atoi(string(msg.Payload()))
 			m.sub <- v
+		case saic.TopicBoot:
+			v.bootLocked, _ = strconv.ParseBool(string(msg.Payload()))
+			m.sub <- v
+		case saic.TopicDoors:
+			v.doorsLocked, _ = strconv.ParseBool(string(msg.Payload()))
+			m.sub <- v
+		case saic.TopicWindowDriver:
+			fmt.Println(string(msg.Payload()))
 		}
 	} else {
 		fmt.Print("Error parsing message!!")
@@ -122,6 +132,8 @@ func newClient() saic.SaicMqttClient {
 	client.Subscribe(saic.TopicRange)
 	client.Subscribe(saic.TopicIntTemp)
 	client.Subscribe(saic.TopicExtTemp)
+	client.Subscribe(saic.TopicDoors)
+	client.Subscribe(saic.TopicBoot)
 
 	return client
 }
@@ -159,6 +171,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func getStringByFlag(flag bool, values [2]string) string {
+	if flag {
+		return values[0]
+	} else {
+		return values[1]
+	}
+}
+
 // Styles
 var headingStyle = lipgloss.NewStyle().
 	Bold(true).
@@ -177,6 +197,10 @@ func (m model) View() string {
 	s += "\n" + headingStyle.Render("Temperature") + "\n"
 	s += fmt.Sprintf("Interior temperature: %d \u00B0C\n", m.v.intTemp)
 	s += fmt.Sprintf("Exterior temperature: %d \u00B0C\n", m.v.extTemp)
+
+	s += "\n" + headingStyle.Render("Doors/Windows") + "\n"
+	s += fmt.Sprintf("Boot: %s\n", getStringByFlag(m.v.bootLocked, saic.BootStatus))
+	s += fmt.Sprintf("Doors: %s\n", getStringByFlag(m.v.doorsLocked, saic.DoorStatus))
 	s += "\nPress q to quit.\n"
 	return s
 }

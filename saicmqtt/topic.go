@@ -9,6 +9,9 @@ const (
 	TopicRange
 	TopicIntTemp
 	TopicExtTemp
+	TopicBoot
+	TopicBonnet
+	TopicDoors
 )
 
 var topicPaths = map[Topic]string{
@@ -17,6 +20,9 @@ var topicPaths = map[Topic]string{
 	TopicRange:      "drivetrain/range",
 	TopicIntTemp:    "climate/interiorTemperature",
 	TopicExtTemp:    "climate/exteriorTemperature",
+	TopicDoors:      "doors/locked",
+	TopicBoot:       "doors/boot",
+	TopicBonnet:     "doors/bonnet",
 }
 
 var topicNames = map[string]Topic{
@@ -25,7 +31,13 @@ var topicNames = map[string]Topic{
 	"drivetrain/range":            TopicRange,
 	"climate/interiorTemperature": TopicIntTemp,
 	"climate/exteriorTemperature": TopicExtTemp,
+	"doors/locked":                TopicDoors,
+	"doors/boot":                  TopicBoot,
+	"doors/bonnet":                TopicBonnet,
 }
+
+var BootStatus = [2]string{"Open", "Closed"}
+var DoorStatus = [2]string{"Locked", "Unlocked"}
 
 func (t Topic) Path() string {
 	return topicPaths[t]
