@@ -9,6 +9,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/progress"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	saic "github.com/sandeepdhakal/mg-dashboard/saicmqtt"
 )
 
@@ -158,15 +159,22 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// Styles
+var headingStyle = lipgloss.NewStyle().
+	Bold(true).
+	Underline(true).
+	Height(2)
+	// Padding(1, 0, 1, 0)
+
 // Bubbletea: the UI
 func (m model) View() string {
-	s := "Battery status\n"
-	s += "---------------\n"
+
+	s := headingStyle.Render("Battery Status") + "\n"
+	// lipgloss.NewStyle().Border(lipgloss.ThickBorder(), true, false)
 	s += m.progress.ViewAs(m.v.soc/100) + "\n"
 	s += fmt.Sprintf("Range: %.2f kms\n", m.v.rng)
 
-	s += "\nTemperature\n"
-	s += "-----------\n"
+	s += "\n" + headingStyle.Render("Temperature") + "\n"
 	s += fmt.Sprintf("Interior temperature: %d \u00B0C\n", m.v.intTemp)
 	s += fmt.Sprintf("Exterior temperature: %d \u00B0C\n", m.v.extTemp)
 	s += "\nPress q to quit.\n"
