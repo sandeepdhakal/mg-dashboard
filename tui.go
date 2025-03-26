@@ -15,12 +15,13 @@ import (
 
 // Vehicle info to be passed to Bubbletea model
 type vehicleInfo struct {
-	soc         float64
-	rng         float64
-	intTemp     int
-	extTemp     int
-	bootLocked  bool
-	doorsLocked bool
+	soc                    float64
+	rng                    float64
+	intTemp                int
+	extTemp                int
+	bootLocked             bool
+	doorsLocked            bool
+	mileageSinceLastCharge float64
 }
 
 var v vehicleInfo = vehicleInfo{}
@@ -71,8 +72,9 @@ var messagePubHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Me
 		case saic.TopicDoors:
 			v.doorsLocked, _ = strconv.ParseBool(string(msg.Payload()))
 			m.sub <- v
-		case saic.TopicWindowDriver:
-			fmt.Println(string(msg.Payload()))
+		case saic.TopicMileageSinceLastCharge:
+			v.mileageSinceLastCharge, _ = strconv.ParseFloat(string(msg.Payload()), 64)
+			m.sub <- v
 		}
 	} else {
 		fmt.Print("Error parsing message!!")
@@ -134,6 +136,7 @@ func newClient() saic.SaicMqttClient {
 	client.Subscribe(saic.TopicExtTemp)
 	client.Subscribe(saic.TopicDoors)
 	client.Subscribe(saic.TopicBoot)
+	client.Subscribe(saic.TopicMileageSinceLastCharge)
 
 	return client
 }
@@ -193,6 +196,7 @@ func (m model) View() string {
 	// lipgloss.NewStyle().Border(lipgloss.ThickBorder(), true, false)
 	s += m.progress.ViewAs(m.v.soc/100) + "\n"
 	s += fmt.Sprintf("Range: %.2f kms\n", m.v.rng)
+	s += fmt.Sprintf("Since Last Charge: %.2f kms\n", m.v.mileageSinceLastCharge)
 
 	s += "\n" + headingStyle.Render("Temperature") + "\n"
 	s += fmt.Sprintf("Interior temperature: %d \u00B0C\n", m.v.intTemp)
